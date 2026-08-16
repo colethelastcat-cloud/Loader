@@ -12,6 +12,12 @@ Loader.Games = {
 		Places = {},
 		Universes = { 9908641400 },
 	},
+	{
+		Name = "Untitled Boxing Game",
+		Url = "https://raw.githubusercontent.com/colethelastcat-cloud/ub/refs/heads/main/untilted%20boxing",
+		Places = { 13621938427 },
+		Universes = { 4691401390 },
+	},
 }
 
 if not game:IsLoaded() then game.Loaded:Wait() end
