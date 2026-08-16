@@ -1,0 +1,147 @@
+local Loader = {
+	Brand = "Blank Hub",
+	Retries = 3,
+	RetryDelay = 1.5,
+	CacheBust = true,
+}
+
+Loader.Games = {
+	{
+		Name = "Football Fusion 3",
+		Url = "https://raw.githubusercontent.com/colethelastcat-cloud/FF3/refs/heads/main/ff3",
+		Places = {},
+		Universes = { 9908641400 },
+	},
+}
+
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+if _G.BlankLoaderBusy then return end
+_G.BlankLoaderBusy = true
+
+local StarterGui = game:GetService("StarterGui")
+
+local function notify(title, text, duration)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {
+			Title = title,
+			Text = text,
+			Duration = duration or 5,
+		})
+	end)
+end
+
+local function resolve()
+	local placeId = game.PlaceId
+	local universeId = game.GameId
+
+	for _, entry in ipairs(Loader.Games) do
+		for _, id in ipairs(entry.Places or {}) do
+			if id == placeId then return entry end
+		end
+	end
+
+	for _, entry in ipairs(Loader.Games) do
+		for _, id in ipairs(entry.Universes or {}) do
+			if id == universeId then return entry end
+		end
+	end
+
+	return nil
+end
+
+local function bust(url)
+	if not Loader.CacheBust then return url end
+	local sep = url:find("?", 1, true) and "&" or "?"
+	return url .. sep .. "v=" .. tostring(os.time()) .. tostring(math.random(1000, 9999))
+end
+
+local function fetch(url)
+	local lastError = "unknown error"
+
+	local ok, body = pcall(function() return game:HttpGet(url, true) end)
+	if ok and type(body) == "string" and #body > 0 then
+		return body
+	end
+	lastError = tostring(body)
+
+	local req = (syn and syn.request)
+		or (http and http.request)
+		or http_request
+		or request
+
+	if type(req) == "function" then
+		local ok2, res = pcall(req, { Url = url, Method = "GET" })
+		if ok2 and type(res) == "table" then
+			local code = tonumber(res.StatusCode or res.status_code) or 0
+			local text = res.Body or res.body
+			if code >= 200 and code < 300 and type(text) == "string" and #text > 0 then
+				return text
+			end
+			lastError = "HTTP " .. tostring(code)
+		else
+			lastError = tostring(res)
+		end
+	end
+
+	return nil, lastError
+end
+
+local entry = resolve()
+
+if not entry then
+	local msg = "Unsupported game. PlaceId " .. tostring(game.PlaceId)
+		.. " | GameId " .. tostring(game.GameId)
+	notify(Loader.Brand, msg, 10)
+	warn("[" .. Loader.Brand .. "] " .. msg)
+	if type(setclipboard) == "function" then
+		pcall(setclipboard, tostring(game.PlaceId))
+		notify(Loader.Brand, "PlaceId copied to clipboard.", 5)
+	end
+	_G.BlankLoaderBusy = false
+	return
+end
+
+notify(Loader.Brand, "Loading " .. entry.Name .. "...", 4)
+
+local source, fetchError
+for attempt = 1, Loader.Retries do
+	source, fetchError = fetch(bust(entry.Url))
+	if source then break end
+	if attempt < Loader.Retries then task.wait(Loader.RetryDelay) end
+end
+
+if not source then
+	local msg = "Download failed: " .. tostring(fetchError)
+	notify(Loader.Brand, msg, 10)
+	warn("[" .. Loader.Brand .. "] " .. msg)
+	_G.BlankLoaderBusy = false
+	return
+end
+
+if _G.BlankHubUnload then pcall(_G.BlankHubUnload) end
+
+local chunk, compileError = loadstring(source)
+if not chunk then
+	local msg = "Compile error: " .. tostring(compileError)
+	notify(Loader.Brand, msg, 12)
+	warn("[" .. Loader.Brand .. "] " .. msg)
+	_G.BlankLoaderBusy = false
+	return
+end
+
+local ranOk, runError = pcall(chunk)
+
+_G.BlankLoaderBusy = false
+
+if not ranOk then
+	local msg = "Runtime error: " .. tostring(runError)
+	notify(Loader.Brand, msg, 12)
+	warn("[" .. Loader.Brand .. "] " .. msg)
+	return
+end
+
+if _G.BlankHubStatus and tostring(_G.BlankHubStatus):sub(1, 5) == "ERROR" then
+	notify(Loader.Brand, tostring(_G.BlankHubStatus), 12)
+	warn("[" .. Loader.Brand .. "] " .. tostring(_G.BlankHubStatus))
+end
