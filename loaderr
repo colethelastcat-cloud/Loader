@@ -4,6 +4,7 @@ local HUBS = {
 	[4730278139] = "colethelastcat-cloud/ub/refs/heads/main/untilted%20boxing",
 	[6969237940] = "colethelastcat-cloud/ub/refs/heads/main/untilted%20boxing",
 	[4777817887] = "colethelastcat-cloud/Bladeball/refs/heads/main/BB",
+	[10539411000] = "colethelastcat-cloud/CATL/refs/heads/main/CATL",
 }
 
 local path = HUBS[game.GameId]
